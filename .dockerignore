@@ -1,0 +1,28 @@
+# Version control / project meta
+.git
+.gitignore
+README.md
+LICENSE
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local data & build artifacts (don't bake into the image)
+db.sqlite3
+output/
+httpcache/
+*.log
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Docker / infra (build context is the repo root; infra files aren't needed in the image)
+.dockerignore
+infra/

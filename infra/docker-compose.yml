@@ -1,0 +1,68 @@
+# vecrawler stack: Django admin + Scrapy generic crawler, backed by Redis and a
+# Splash JS-rendering service.
+#
+# Run from the repo root:
+#   docker compose -f infra/docker-compose.yml up -d redis splash site
+#   docker compose -f infra/docker-compose.yml run --rm crawler runcrawler my-site
+#
+# The Django site and the crawler share the same SQLite DB and output dir via
+# bind mounts, so admin-configured crawlers are visible to the crawler.
+# Build context is the repo root (..); host paths below are relative to it.
+services:
+  # ---- Redis: broker / cache for the planned Celery + scrapy-redis work ----
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # ---- Splash: headless browser for rendering JS-heavy pages while crawling -
+  splash:
+    image: scrapinghub/splash:latest
+    ports:
+      - "8050:8050"
+    restart: unless-stopped
+
+  # ---- Django admin / web site --------------------------------------------
+  site:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.django
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../db.sqlite3:/app/db.sqlite3   # shared config DB
+      - ../output:/app/output
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      SPLASH_URL: http://splash:8050
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # ---- Scrapy generic crawler (run on demand, not a long-running service) ---
+  crawler:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.crawler
+    volumes:
+      - ../db.sqlite3:/app/db.sqlite3   # same DB the site writes configs to
+      - ../output:/app/output
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      SPLASH_URL: http://splash:8050
+      # Ollama runs on the host; reach it via the Docker host gateway.
+      OLLAMA_HOST: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - splash
+    # No `up` autostart — invoke explicitly:
+    #   docker compose -f infra/docker-compose.yml run --rm crawler runcrawler <slug>
+    profiles: ["crawl"]
+
+volumes:
+  redis-data:

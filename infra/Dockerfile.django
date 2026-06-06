@@ -1,0 +1,36 @@
+# Django admin / web site for vecrawler.
+# Build from the repo root (context = repo root, this file lives in infra/):
+#
+#   docker build -f infra/Dockerfile.django -t vecrawler-site .
+#   docker run -p 8000:8000 -v "$PWD/db.sqlite3:/app/db.sqlite3" vecrawler-site
+#
+# Python 3.10 matches the pinned scientific stack (scipy 1.8.0 / numpy 1.24.4).
+FROM python:3.10-slim
+
+# - PYTHONUNBUFFERED: stream logs straight to the container output
+# - PYTHONDONTWRITEBYTECODE: no .pyc clutter in the image
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_SETTINGS_MODULE=config.settings
+
+WORKDIR /app
+
+# Build deps for the pinned numpy/scipy/scikit-learn wheels (kept minimal,
+# removed after the install to keep the image small).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gfortran libopenblas-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+# Apply migrations, then serve. `runserver` is used because the project runs
+# with DEBUG=True (it serves the admin's static files itself). For production,
+# set STATIC_ROOT, run `collectstatic`, add a WSGI server (e.g. gunicorn +
+# whitenoise) and swap the command to:
+#   gunicorn config.wsgi:application --bind 0.0.0.0:8000
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"]

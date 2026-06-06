@@ -1,0 +1,37 @@
+# Scrapy generic crawler for vecrawler.
+# Build from the repo root (context = repo root, this file lives in infra/):
+#
+#   docker build -f infra/Dockerfile.crawler -t vecrawler-crawler .
+#   # Run a crawl by Crawler slug/name (shares the site's DB + reaches Ollama):
+#   docker run --rm \
+#     -v "$PWD/db.sqlite3:/app/db.sqlite3" \
+#     -v "$PWD/output:/app/output" \
+#     -e OLLAMA_HOST=http://host.docker.internal:11434 \
+#     vecrawler-crawler runcrawler my-site
+#
+# Python 3.10 matches the pinned scientific stack (scipy 1.8.0 / numpy 1.24.4).
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_SETTINGS_MODULE=config.settings \
+    DJANGO_ALLOW_ASYNC_UNSAFE=true
+
+WORKDIR /app
+
+# Build deps for the pinned numpy/scipy/scikit-learn wheels.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gfortran libopenblas-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# `python manage.py` is the entrypoint, so a crawl is just the run args:
+#   docker run vecrawler-crawler runcrawler <slug> [--start-url ...] [-s K=V]
+# Override the entrypoint to use Scrapy directly:
+#   docker run --entrypoint scrapy vecrawler-crawler crawl generic -a config=<slug>
+ENTRYPOINT ["python", "manage.py"]
+CMD ["runcrawler", "--help"]
