@@ -1,0 +1,23 @@
+# Web framework + admin (crawler/entity/linguistics apps)
+Django==5.2.15
+# Nested Topic tree + collapsible tree view in the admin
+django-mptt==0.18.0
+django-mptt-admin==2.9.0
+# Type-to-search (autocomplete) admin list filters
+django-admin-autocomplete-filter==0.7.1
+
+# Crawling
+Scrapy==2.13.0
+
+# NLP: LDA topics (computetopics) and embeddings (computevectors)
+scikit-learn==1.3.2
+# Pinned for binary compatibility with scikit-learn 1.3.2 / system scipy;
+# numpy must stay <1.25 so scipy 1.8.0 imports cleanly.
+numpy==1.24.4
+scipy==1.8.0
+
+# Optional NLP backends (uncomment to enable):
+#   extractentities --ner   -> named-entity recognition
+# spacy==3.7.5
+#   computevectors --st     -> transformer embeddings
+# sentence-transformers==2.7.0
