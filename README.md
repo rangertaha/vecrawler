@@ -67,6 +67,34 @@ Django admin  ──►  Crawler config (Crawler, Domain, Rule, Item, Prop)
 2. `DuplicatesPipeline` — drops items whose `url` was already seen this run.
 3. `ItemSaverPipeline` — parses page content with Ollama and saves an `item.Item`.
 
+### Project layout
+
+```
+vecrawler/
+├── config/         # Django project (settings, urls, asgi/wsgi)
+├── crawler/        # Crawler/Domain/Rule/Item/Prop models + runcrawler, createmetadata
+├── item/           # Scraped records (item.Item)
+├── pipeline/       # Pipeline/Transform post-processing definitions
+├── vecrawler/      # Scrapy project — generic spider, pipelines, middlewares, settings
+├── output/         # Timestamped CSV exports
+├── manage.py       # Django entry point
+└── scrapy.cfg      # Scrapy entry point
+```
+
+### Tech stack
+
+| Area              | Current                          | Planned                          |
+|-------------------|----------------------------------|----------------------------------|
+| Crawling          | Scrapy                           | —                                |
+| Config / admin    | Django + django-mptt             | —                                |
+| Page parsing      | Ollama (local LLM)               | template-driven prompts          |
+| Storage           | SQLite (Django ORM)              | —                                |
+| LLM / embeddings  | scikit-learn                     | sentence-transformers (vectors)  |
+| Task queue        | —                                | Celery + Redis                   |
+| Search / analytics| —                                | Elasticsearch                    |
+
+See the [Roadmap](#roadmap) for the planned work.
+
 ## Requirements
 
 - Python 3.x
